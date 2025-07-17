@@ -37,7 +37,7 @@ const AppContextProvider = ({ children }) => {
   useEffect(() => {
     const fetchMentors = async () => {
       try {
-        const res = await axios.get("/api/mentors");
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/mentors`);
 
         if (Array.isArray(res.data)) {
           setMentors(res.data);
