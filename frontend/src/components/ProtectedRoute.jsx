@@ -13,6 +13,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect to complete profile if not complete
+  if (!user.profileComplete && window.location.pathname !== '/profile/edit') {
+    return <Navigate to="/profile/edit" replace />;
+  }
+
   return children;
 };
 

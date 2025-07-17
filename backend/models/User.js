@@ -53,6 +53,41 @@ const userSchema = new mongoose.Schema(
       default: '',
     },
     
+    profileComplete: {
+      type: Boolean,
+      default: false,
+    },
+
+    gender: {
+      type: String,
+      default: '',
+    },
+
+    dob: {
+      type: Date,
+    },
+
+    phone: {
+      type: String,
+      default: '',
+    },
+
+    address: {
+      type: String,
+      default: '',
+    },
+
+    goals: {
+      type: String,
+      default: '',
+    },
+
+    location: {
+      type: String,
+      default: '',
+    },
+
+
 
     availability: {
       type: [
@@ -64,9 +99,10 @@ const userSchema = new mongoose.Schema(
       ],
       default: [],
     },
+
     image: {
       type: String,
-      default: '', // optional: add a default profile image
+      default: '', 
     },
 
   },

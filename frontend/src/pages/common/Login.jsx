@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../../services/authService';
 import { toast } from 'react-toastify';
 import { AppContext } from '../../context/AppContext';
+import { motion } from 'framer-motion'; 
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,19 +22,16 @@ const Login = () => {
     try {
       const response = await loginUser(form.email, form.password);
 
-      // Make sure response has token and user
       if (!response.token || !response.user) {
         throw new Error("Login failed: Invalid response from server");
       }
 
-      // Save token and user info
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
       setUser(response.user);
 
       toast.success(`Welcome back, ${response.user.name}! 🎉`);
 
-      // Redirect based on role
       const role = response.user.role;
       if (role === 'admin') {
         navigate('/admin/users');
@@ -56,10 +54,20 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-2xl font-semibold text-center text-primary mb-6">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8"
+      >
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-2xl font-semibold text-center text-primary mb-6"
+        >
           Welcome Back 👋
-        </h2>
+        </motion.h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-red-500 text-sm text-center">{error}</p>}
@@ -96,20 +104,25 @@ const Login = () => {
             />
           </div>
 
-          <div>
+          <motion.div whileHover={{ scale: 1.02 }}>
             <button
               type="submit"
               className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-2 px-4 rounded-xl transition duration-200"
             >
               Login
             </button>
-          </div>
+          </motion.div>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="text-center text-sm text-gray-500 mt-6"
+        >
           Need access? Contact your program admin.
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   );
 };

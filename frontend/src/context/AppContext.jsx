@@ -5,19 +5,35 @@ import axios from "axios";
 export const AppContext = createContext();
 
 const AppContextProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
   const [mentors, setMentors] = useState([]);
   const [loadingMentors, setLoadingMentors] = useState(true);
 
-  // Load user from localStorage on first render
+  // Load user from localStorage on initial render
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUserState(JSON.parse(storedUser));
     }
   }, []);
 
-  // Fetch mentors from backend
+  // Sync user state to localStorage when it changes
+  const setUser = (updatedUser) => {
+    setUserState(updatedUser);
+    if (updatedUser) {
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+    } else {
+      localStorage.removeItem("user");
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    setUserState(null);
+  };
+
+  // Fetch mentors
   useEffect(() => {
     const fetchMentors = async () => {
       try {
@@ -27,11 +43,11 @@ const AppContextProvider = ({ children }) => {
           setMentors(res.data);
         } else {
           console.warn("Mentors API response is not an array:", res.data);
-          setMentors([]); // fallback to empty array
+          setMentors([]); // fallback
         }
       } catch (err) {
         console.error("Failed to fetch mentors:", err);
-        setMentors([]); // fallback to empty array on error
+        setMentors([]);
       } finally {
         setLoadingMentors(false);
       }
@@ -39,12 +55,6 @@ const AppContextProvider = ({ children }) => {
 
     fetchMentors();
   }, []);
-
-  const logout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    setUser(null);
-  };
 
   return (
     <AppContext.Provider

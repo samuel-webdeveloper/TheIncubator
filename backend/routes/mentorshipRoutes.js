@@ -1,10 +1,11 @@
 import express from 'express';
-import protect from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js';
 import {
   createRequest,
   getRequestsForMentor,
   getRequestsByMentee,
   updateRequestStatus,
+  deleteRequest,
 } from '../controllers/mentorshipController.js';
 
 const router = express.Router();
@@ -20,5 +21,8 @@ router.get('/mentor', protect, getRequestsForMentor);
 
 // Mentor accepts/rejects request
 router.put('/:id/status', protect, updateRequestStatus);
+
+// Mentee cancel request
+router.delete('/:id', protect, deleteRequest);
 
 export default router;

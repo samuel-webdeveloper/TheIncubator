@@ -1,16 +1,16 @@
+// mentorshipController.js
 import MentorshipRequest from '../models/MentorshipRequest.js';
+import Session from '../models/Session.js';
 
 // Mentee: Create a mentorship request
 export const createRequest = async (req, res) => {
   try {
-    const { mentorId, message } = req.body;
+    const { mentorId, message, slot } = req.body;
 
-    // Validate input
-    if (!mentorId || !message) {
-      return res.status(400).json({ message: 'Mentor ID and message are required' });
+    if (!mentorId || !message || !slot) {
+      return res.status(400).json({ message: 'Mentor ID, message, and slot are required' });
     }
 
-    // Prevent duplicate pending request
     const existing = await MentorshipRequest.findOne({
       mentor: mentorId,
       mentee: req.user.id,
@@ -25,6 +25,7 @@ export const createRequest = async (req, res) => {
       mentee: req.user.id,
       mentor: mentorId,
       message,
+      slot,
     });
 
     res.status(201).json({ message: 'Request sent successfully', data: newRequest });
@@ -62,11 +63,96 @@ export const updateRequestStatus = async (req, res) => {
       return res.status(404).json({ message: 'Request not found or unauthorized' });
     }
 
-    request.status = req.body.status;
+    const newStatus = req.body.status;
+
+    if (!['accepted', 'rejected'].includes(newStatus)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+
+    request.status = newStatus;
     await request.save();
 
-    res.status(200).json({ message: `Request ${request.status}`, data: request });
+    if (newStatus === 'accepted') {
+      if (!request.slot) {
+        return res.status(400).json({ message: 'No time slot provided on the request' });
+      }
+
+      const [dayPart, timePart] = request.slot.split('@').map((s) => s.trim());
+      const startTime = timePart.split('-')[0].trim();
+
+      const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const targetDayIndex = weekdays.indexOf(dayPart);
+      const now = new Date();
+      const diff = (targetDayIndex + 7 - now.getDay()) % 7 || 7;
+
+      const appointmentDate = new Date(now);
+      appointmentDate.setDate(now.getDate() + diff);
+      const [hour, minute] = startTime.split(':').map(Number);
+      appointmentDate.setHours(hour, minute, 0, 0);
+
+      const session = await Session.create({
+        mentor: request.mentor,
+        mentee: request.mentee,
+        date: appointmentDate.toISOString(),
+        time: startTime,
+      });
+
+      return res.status(200).json({
+        message: 'Request accepted and session created ✅',
+        request,
+        session,
+      });
+    }
+
+    res.status(200).json({ message: `Request ${newStatus}`, request });
   } catch (error) {
+    console.error('❌ updateRequestStatus error:', error.message);
     res.status(500).json({ message: error.message });
   }
 };
+
+// Mentee: Cancel a mentorship request and mark session as cancelled
+export const deleteRequest = async (req, res) => {
+  try {
+    const request = await MentorshipRequest.findById(req.params.id);
+
+    if (!request || request.mentee.toString() !== req.user.id) {
+      return res.status(404).json({ message: 'Request not found or unauthorized' });
+    }
+
+    request.status = 'cancelled';
+    await request.save();
+
+    if (request.status === 'accepted' && request.slot) {
+      const [dayPart, timePart] = request.slot.split('@').map((s) => s.trim());
+      const startTime = timePart.split('-')[0].trim();
+
+      const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const targetDayIndex = weekdays.indexOf(dayPart);
+      const now = new Date();
+      const diff = (targetDayIndex + 7 - now.getDay()) % 7 || 7;
+
+      const sessionDate = new Date(now);
+      sessionDate.setDate(now.getDate() + diff);
+      const [hour, minute] = startTime.split(':').map(Number);
+      sessionDate.setHours(hour, minute, 0, 0);
+
+      const session = await Session.findOne({
+        mentor: request.mentor,
+        mentee: request.mentee,
+        time: startTime,
+      });
+
+      if (session) {
+        session.status = 'Cancelled';
+        await session.save();
+      }
+    }
+
+    res.status(200).json({ message: 'Request cancelled successfully' });
+  } catch (error) {
+    console.error('❌ deleteRequest error:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+

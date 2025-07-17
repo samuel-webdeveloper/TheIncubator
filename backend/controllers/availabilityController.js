@@ -39,6 +39,23 @@ export const getMyAvailability = async (req, res) => {
   }
 };
 
+// ✅ Get availability by mentor ID (for mentees viewing mentor detail)
+export const getAvailabilityByMentorId = async (req, res) => {
+  try {
+    const availability = await Availability.findOne({ mentor: req.params.mentorId });
+
+    if (!availability) {
+      
+      return res.status(200).json({ slots: [] });
+    }
+
+    res.status(200).json(availability);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 // ✅ Update mentor availability
 export const updateAvailability = async (req, res) => {
   const mentorId = req.user.id;

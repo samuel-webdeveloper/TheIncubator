@@ -1,9 +1,11 @@
 import User from '../models/User.js';
 import bcrypt from 'bcrypt';
 import MentorshipRequest from '../models/MentorshipRequest.js';
+import Availability from '../models/Availability.js';
 import Session from '../models/Session.js';
 import imagekit from '../config/imageKit.js';
 import path from 'path';
+import sendEmail from '../config/sendEmail.js';
 
 // @desc    Admin creates a new user
 export const createUser = async (req, res) => {
@@ -21,9 +23,9 @@ export const createUser = async (req, res) => {
 
     // Upload profile image ONLY if role is mentor and file is present
     if (req.file && role === 'mentor') {
-      const ext = path.extname(req.file.originalname); // e.g., .jpg, .png
+      const ext = path.extname(req.file.originalname); 
       const uploadedImage = await imagekit.upload({
-        file: req.file.buffer, // buffer because multer stores it in memory
+        file: req.file.buffer, 
         fileName: `mentor-${Date.now()}${ext}`,
         folder: '/mentorship/mentors',
       });
@@ -114,7 +116,7 @@ export const deleteMatch = async (req, res) => {
     const match = await MentorshipRequest.findById(req.params.id);
     if (!match) return res.status(404).json({ message: 'Match not found' });
 
-    await match.deleteOne(); // Or match.remove() if using older Mongoose
+    await match.deleteOne(); 
     res.status(200).json({ message: 'Match deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -167,10 +169,10 @@ export const getAllSessions = async (req, res) => {
 
 // Admin manually assigns a mentor to a mentee
 export const manuallyAssignMentor = async (req, res) => {
-  const { mentorId, menteeId, message } = req.body;
+  const { mentorId, menteeId, message, slot } = req.body;
 
-  if (!mentorId || !menteeId) {
-    return res.status(400).json({ message: 'Mentor ID and Mentee ID are required' });
+  if (!mentorId || !menteeId || !slot) {
+    return res.status(400).json({ message: 'Mentor ID, Mentee ID, and Slot are required' });
   }
 
   try {
@@ -184,87 +186,130 @@ export const manuallyAssignMentor = async (req, res) => {
       mentee: menteeId,
       message: message || 'Assigned by admin',
       status: 'accepted',
+      slot,
     });
 
-    // ✅ Re-fetch with .populate
     const populated = await MentorshipRequest.findById(newRequest._id)
       .populate('mentor', 'name email')
       .populate('mentee', 'name email');
 
+    // ✅ Send email notifications
+    const formattedSlot = `${slot.day}, ${slot.startTime} - ${slot.endTime}`;
+
+    const mentorSubject = 'You have been assigned a new mentee';
+    const menteeSubject = 'You have been assigned a mentor';
+
+    const mentorHtml = `
+      <p>Hello ${populated.mentor.name},</p>
+      <p>You have been matched with a mentee: <strong>${populated.mentee.name}</strong>.</p>
+      <p><strong>Session Slot:</strong> ${formattedSlot}</p>
+      <p>Please log in to your dashboard to review the match and session details.</p>
+      <br/>
+      <p>Best regards,<br/>TheIncubator Team</p>
+    `;
+
+    const menteeHtml = `
+      <p>Hello ${populated.mentee.name},</p>
+      <p>You have been matched with a mentor: <strong>${populated.mentor.name}</strong>.</p>
+      <p><strong>Session Slot:</strong> ${formattedSlot}</p>
+      <p>Please log in to your dashboard to prepare for your session.</p>
+      <br/>
+      <p>Best regards,<br/>TheIncubator Team</p>
+    `;
+
+    await sendEmail(populated.mentor.email, mentorSubject, mentorHtml);
+    await sendEmail(populated.mentee.email, menteeSubject, menteeHtml);
+
     res.status(201).json({
-      message: 'Mentor successfully assigned to mentee',
+      message: 'Mentor successfully assigned to mentee and emails sent',
       match: populated,
     });
   } catch (error) {
+    console.error('Manual Assignment Error:', error.message);
     res.status(500).json({ message: error.message });
   }
 };
 
-
-/*
-import User from '../models/User.js';
-
-// @desc    Admin creates a new user (mentor, mentee, or admin)
-export const createUser = async (req, res) => {
-  const { name, email, password, role } = req.body;
-
-  if (!name || !email || !password || !role) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
-
+// @desc Admin gets a single user by ID (with availability if mentor)
+export const getUserById = async (req, res) => {
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ message: 'User already exists' });
-
-    // For now: store password as plain text (NOTE: Replace with bcrypt in production)
-    const user = await User.create({
-      name,
-      email,
-      password,  // plain text for now
-      role,
-    });
-
-    res.status(201).json({
-      message: 'User created successfully',
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Admin updates a user's role
-export const updateUserRole = async (req, res) => {
-  const { id } = req.params;
-  const { role } = req.body;
-
-  if (!role) return res.status(400).json({ message: 'New role is required' });
-
-  try {
-    const user = await User.findById(id);
+    const user = await User.findById(req.params.id).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    user.role = role;
-    await user.save();
+    let availability = [];
 
-    res.status(200).json({ message: 'User role updated', user });
+    // Only fetch availability if user is a mentor
+    if (user.role === 'mentor') {
+      const availDoc = await Availability.findOne({ mentor: user._id });
+      availability = availDoc?.slots || [];
+    }
+
+    res.status(200).json({ ...user.toObject(), availability });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: 'Failed to load user with availability' });
   }
 };
 
-// @desc    Admin fetches all users
-export const getAllUsers = async (req, res) => {
+// Creating matched session
+export const createMatchedSession = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
-    res.status(200).json(users);
+    const { mentorId, menteeId, date, time, topic } = req.body;
+
+    // Validate input
+    if (!mentorId || !menteeId || !date || !time || !topic) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Create the session
+    const session = await Session.create({
+      mentor: mentorId,
+      mentee: menteeId,
+      date,
+      time,
+      topic,
+      status: 'accepted', // since admin is confirming
+      createdByAdmin: true,
+    });
+
+    // Fetch mentor and mentee details
+    const mentor = await User.findById(mentorId);
+    const mentee = await User.findById(menteeId);
+
+    // Send email to mentor
+    await sendEmail(
+      mentor.email,
+      'New Mentorship Session Assigned',
+      `<p>Hello ${mentor.name},</p>
+      <p>A mentorship session has been assigned to you by TheIncubator admin:</p>
+      <ul>
+        <li><strong>Date:</strong> ${date}</li>
+        <li><strong>Time:</strong> ${time}</li>
+        <li><strong>Topic:</strong> ${topic}</li>
+        <li><strong>Mentee:</strong> ${mentee.name}</li>
+      </ul>
+      <p>Please log in to view the details.</p>`
+    );
+
+    // Send email to mentee
+    await sendEmail(
+      mentee.email,
+      'New Mentorship Session Assigned',
+      `<p>Hello ${mentee.name},</p>
+      <p>A mentorship session has been assigned to you by TheIncubator admin:</p>
+      <ul>
+        <li><strong>Date:</strong> ${date}</li>
+        <li><strong>Time:</strong> ${time}</li>
+        <li><strong>Topic:</strong> ${topic}</li>
+        <li><strong>Mentor:</strong> ${mentor.name}</li>
+      </ul>
+      <p>Please log in to view the details.</p>`
+    );
+
+    res.status(201).json({ message: 'Session created and emails sent successfully', session });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error creating session or sending email:', error);
+    res.status(500).json({ error: 'Failed to create session' });
   }
 };
-*/
+

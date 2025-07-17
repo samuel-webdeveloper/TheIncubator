@@ -2,10 +2,27 @@ import React, { useState, useEffect, useContext } from 'react';
 import { toast } from 'react-toastify';
 import axios from '../../axiosInstance';
 import { AppContext } from '../../context/AppContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const daysOfWeek = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+};
+
+const slotVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: (i) => ({
+    opacity: 1,
+    scale: 1,
+    transition: { delay: i * 0.1 }
+  }),
+  exit: { opacity: 0, scale: 0.9, transition: { duration: 0.3 } }
+};
 
 const Availability = () => {
   const { user } = useContext(AppContext);
@@ -25,9 +42,7 @@ const Availability = () => {
         setAvailability(data.slots || []);
       } catch (error) {
         const status = error.response?.status;
-
         if (status === 404) {
-          // No availability found yet — valid scenario
           console.log('ℹ️ No availability set yet for this mentor.');
           setAvailability([]);
         } else {
@@ -36,7 +51,6 @@ const Availability = () => {
         }
       }
     };
-
     fetchAvailability();
   }, []);
 
@@ -65,7 +79,6 @@ const Availability = () => {
       toast.error('All fields are required');
       return;
     }
-
     if (startTime >= endTime) {
       toast.error('End time must be after start time');
       return;
@@ -95,7 +108,7 @@ const Availability = () => {
       setEndTime('');
       toast.success('Slot added successfully ✅');
     } catch (error) {
-      // Already handled inside saveAvailability
+      // already handled
     }
   };
 
@@ -114,16 +127,26 @@ const Availability = () => {
       await saveAvailability(updated);
       toast.info('Slot removed');
     } catch (error) {
-      // Already handled inside saveAvailability
+      // already handled
     }
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-primary mb-4">Manage Your Availability</h2>
+    <motion.div
+      className="p-6"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <h2 className="text-2xl font-bold text-primary mb-4">
+        Manage Your Availability
+      </h2>
 
       {/* Add Slot Form */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 mb-6">
+      <motion.div
+        className="flex flex-col sm:flex-row items-start sm:items-end gap-4 mb-6"
+        variants={containerVariants}
+      >
         <div>
           <label className="block text-sm mb-1">Day</label>
           <select
@@ -163,37 +186,64 @@ const Availability = () => {
         >
           Add Slot
         </button>
-      </div>
+      </motion.div>
 
       {/* Availability Display */}
-      {availability.length > 0 ? (
-        <div className="space-y-4">
-          {availability.map((slot) => (
-            <div key={slot.day} className="bg-white p-4 rounded shadow">
-              <h4 className="font-semibold text-lg mb-2 text-primary">{slot.day}</h4>
-              <ul className="space-y-2">
-                {slot.times.map((t, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center text-sm border p-2 rounded"
-                  >
-                    <span>{t.start} - {t.end}</span>
-                    <button
-                      onClick={() => removeSlot(slot.day, index)}
-                      className="text-red-500 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-gray-500">No availability set yet.</p>
-      )}
-    </div>
+      <AnimatePresence>
+        {availability.length > 0 ? (
+          <motion.div
+            className="space-y-4"
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            {availability.map((slot, i) => (
+              <motion.div
+                key={slot.day}
+                className="bg-white p-4 rounded shadow"
+                custom={i}
+                variants={slotVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <h4 className="font-semibold text-lg mb-2 text-primary">{slot.day}</h4>
+                <ul className="space-y-2">
+                  <AnimatePresence>
+                    {slot.times.map((t, index) => (
+                      <motion.li
+                        key={`${slot.day}-${index}`}
+                        className="flex justify-between items-center text-sm border p-2 rounded"
+                        variants={slotVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                      >
+                        <span>{t.start} - {t.end}</span>
+                        <button
+                          onClick={() => removeSlot(slot.day, index)}
+                          className="text-red-500 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.p
+            className="text-gray-500"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { delay: 0.3 } }}
+          >
+            No availability set yet.
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
 

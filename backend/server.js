@@ -9,6 +9,7 @@ import sessionRoutes from './routes/sessionRoutes.js';
 import feedbackRoutes from './routes/feedbackRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import mentorRoutes from './routes/mentorRoutes.js';
+import imagekitRoutes from './routes/imagekitRoutes.js';
 
 
 
@@ -30,6 +31,7 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/feedbacks', feedbackRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/mentors', mentorRoutes);
+app.use('/api/imagekit', imagekitRoutes);
 
 
 
@@ -41,5 +43,5 @@ app.get('/', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

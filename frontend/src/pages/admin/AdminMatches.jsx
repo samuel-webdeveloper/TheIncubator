@@ -8,6 +8,8 @@ const AdminMatches = () => {
   const [matches, setMatches] = useState([]);
   const [selectedMentor, setSelectedMentor] = useState('');
   const [selectedMentee, setSelectedMentee] = useState('');
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,9 +33,71 @@ const AdminMatches = () => {
     fetchData();
   }, []);
 
+  const handleMentorChange = async (mentorId) => {
+    setSelectedMentor(mentorId);
+    setSelectedSlot('');
+    setSlots([]);
+
+    if (!mentorId) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const { data: availability } = await axios.get(`/api/availability/${mentorId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!availability?.slots?.length) {
+        toast.warning('This mentor has no available slots');
+        return;
+      }
+
+      const now = new Date();
+      const futureSlots = [];
+
+      const daysMap = {
+        Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+        Thursday: 4, Friday: 5, Saturday: 6,
+      };
+
+      availability.slots.forEach((slot) => {
+        const { day, times } = slot;
+        const targetDayIndex = daysMap[day];
+        const today = now.getDay();
+
+        times.forEach(({ start, end }) => {
+          const [startHour, startMin] = start.split(':').map(Number);
+          const slotDate = new Date();
+
+          // Set slot date to the upcoming correct weekday
+          let daysToAdd = (targetDayIndex - today + 7) % 7;
+          slotDate.setDate(now.getDate() + daysToAdd);
+          slotDate.setHours(startHour, startMin, 0, 0);
+
+          const isToday = daysToAdd === 0;
+
+          if (!isToday || slotDate > now) {
+            futureSlots.push({
+              label: `${day} ${start} - ${end}`,
+              value: slotDate.toISOString(),
+            });
+          }
+        });
+      });
+
+      if (futureSlots.length === 0) {
+        toast.warning('No upcoming slots available for this mentor');
+      }
+
+      setSlots(futureSlots);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load mentor availability');
+    }
+  };
+
   const handleMatch = async () => {
-    if (!selectedMentor || !selectedMentee) {
-      toast.error('Please select both mentor and mentee');
+    if (!selectedMentor || !selectedMentee || !selectedSlot) {
+      toast.error('Please select mentor, mentee, and slot');
       return;
     }
 
@@ -45,6 +109,7 @@ const AdminMatches = () => {
           mentorId: selectedMentor,
           menteeId: selectedMentee,
           message: 'Assigned by admin',
+          slot: selectedSlot,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -55,6 +120,8 @@ const AdminMatches = () => {
       toast.success('Match created successfully');
       setSelectedMentor('');
       setSelectedMentee('');
+      setSelectedSlot('');
+      setSlots([]);
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || 'Failed to create match');
@@ -83,13 +150,13 @@ const AdminMatches = () => {
       <h2 className="text-2xl font-bold text-primary mb-6">Mentorship Matches</h2>
 
       {/* Match Creation Form */}
-      <div className="bg-white shadow rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 items-end">
-        <div className="flex-1">
+      <div className="bg-white shadow rounded-xl p-4 mb-6 flex flex-col md:flex-row gap-4 flex-wrap items-end">
+        <div className="flex-1 min-w-[200px]">
           <label className="block mb-1 text-sm">Select Mentor</label>
           <select
             className="w-full border rounded px-3 py-2"
             value={selectedMentor}
-            onChange={(e) => setSelectedMentor(e.target.value)}
+            onChange={(e) => handleMentorChange(e.target.value)}
           >
             <option value="">-- Choose Mentor --</option>
             {mentors.map((mentor) => (
@@ -100,7 +167,7 @@ const AdminMatches = () => {
           </select>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 min-w-[200px]">
           <label className="block mb-1 text-sm">Select Mentee</label>
           <select
             className="w-full border rounded px-3 py-2"
@@ -116,6 +183,23 @@ const AdminMatches = () => {
           </select>
         </div>
 
+        <div className="flex-1 min-w-[200px]">
+          <label className="block mb-1 text-sm">Select Slot</label>
+          <select
+            className="w-full border rounded px-3 py-2"
+            value={selectedSlot}
+            onChange={(e) => setSelectedSlot(e.target.value)}
+            disabled={!slots.length}
+          >
+            <option value="">-- Choose Slot --</option>
+            {slots.map((slot, idx) => (
+              <option key={idx} value={slot.value}>
+                {slot.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           onClick={handleMatch}
           className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-dark transition"
@@ -124,13 +208,14 @@ const AdminMatches = () => {
         </button>
       </div>
 
-      {/* Match List Table */}
+      {/* Match List */}
       <div className="overflow-x-auto">
         <table className="w-full bg-white shadow rounded-xl overflow-hidden">
           <thead className="bg-gray-100 text-left text-sm text-gray-600 uppercase">
             <tr>
               <th className="p-4">Mentor</th>
               <th className="p-4">Mentee</th>
+              <th className="p-4">Slot</th>
               <th className="p-4">Actions</th>
             </tr>
           </thead>
@@ -139,6 +224,7 @@ const AdminMatches = () => {
               <tr key={match._id} className="border-t">
                 <td className="p-4">{match.mentor?.name}</td>
                 <td className="p-4">{match.mentee?.name}</td>
+                <td className="p-4">{new Date(match.slot).toLocaleString()}</td>
                 <td className="p-4">
                   <button
                     onClick={() => handleDeleteMatch(match._id)}
@@ -151,7 +237,7 @@ const AdminMatches = () => {
             ))}
             {matches.length === 0 && (
               <tr>
-                <td colSpan="3" className="p-4 text-center text-gray-500">
+                <td colSpan="4" className="p-4 text-center text-gray-500">
                   No matches yet.
                 </td>
               </tr>

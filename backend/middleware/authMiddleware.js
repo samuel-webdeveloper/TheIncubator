@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+// Middleware to protect routes and attach user to req
 export const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
@@ -18,4 +19,11 @@ export const protect = async (req, res, next) => {
   }
 };
 
-export default protect;
+// Middleware to allow only admin users
+export const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied: Admins only' });
+  }
+};

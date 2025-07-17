@@ -2,11 +2,14 @@ import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
+import ScrollToTop from './components/ScrollToTop';
+
 // Common Pages
 import Login from './pages/common/Login';
 import Home from './pages/common/Home';
 import CompleteProfile from './pages/common/CompleteProfile';
 import About from './pages/common/About';
+import ChangePassword from './pages/common/ChangePassword';
 
 // Admin
 import AdminUsers from './pages/admin/AdminUsers';
@@ -20,6 +23,7 @@ import MentorLayout from './layouts/MentorLayout';
 import Availability from './pages/mentor/Availability';
 import Requests from './pages/mentor/Requests';
 import Sessions from './pages/mentor/Sessions';
+import MentorProfile from './pages/mentor/MentorProfile';
 
 // Mentee
 import MenteeLayout from './layouts/MenteeLayout';
@@ -37,6 +41,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 function App() {
   return (
     <>
+      <ScrollToTop /> 
       <Routes>
         {/* Public/Common Routes */}
         <Route path="/" element={<Layout />}>
@@ -44,9 +49,10 @@ function App() {
           <Route path="login" element={<Login />} />
           <Route path="profile/edit" element={<CompleteProfile />} />
           <Route path="about" element={<About />} />
+          <Route path="/change-password" element={<ChangePassword />} />
         </Route>
 
-        {/* Admin Routes - Separated Correctly */}
+        {/* Admin Routes */}
         <Route
           path="/admin/users"
           element={
@@ -93,6 +99,7 @@ function App() {
           <Route path="availability" element={<Availability />} />
           <Route path="requests" element={<Requests />} />
           <Route path="sessions" element={<Sessions />} />
+          <Route path="profile" element={<MentorProfile />} />
         </Route>
 
         {/* Mentee Routes */}
@@ -114,8 +121,7 @@ function App() {
         </Route>
       </Routes>
 
-      {/* Toast Notifications */}
-      <ToastContainer position="top-center" autoClose={2000} />
+      <ToastContainer position="top-right" autoClose={2000} />
     </>
   );
 }

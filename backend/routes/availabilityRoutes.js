@@ -1,10 +1,11 @@
 import express from 'express';
-import protect from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/authMiddleware.js'; 
 import {
   setAvailability, 
   getMyAvailability,
   updateAvailability,
-  deleteAvailability
+  deleteAvailability,
+  getAvailabilityByMentorId
 } from '../controllers/availabilityController.js';
 
 const router = express.Router();
@@ -23,5 +24,8 @@ router.put('/', updateAvailability);
 
 // DELETE - Delete availability
 router.delete('/', deleteAvailability);
+
+// GET availability for a specific mentor
+router.get('/:mentorId', getAvailabilityByMentorId);
 
 export default router;

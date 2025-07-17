@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import axios from '../../axiosInstance';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4 }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: (i) => ({
+    opacity: 1,
+    scale: 1,
+    transition: { delay: i * 0.1 }
+  })
+};
 
 const Sessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -68,7 +87,12 @@ const Sessions = () => {
   };
 
   return (
-    <div className="p-6">
+    <motion.div
+      className="p-6"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       <h2 className="text-2xl font-bold text-primary mb-6">Your Sessions</h2>
 
       {/* Filters */}
@@ -105,15 +129,26 @@ const Sessions = () => {
 
       {/* Session List */}
       {loading ? (
-        <p className="text-gray-500">Loading sessions...</p>
+        <motion.p className="text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          Loading sessions...
+        </motion.p>
       ) : filteredSessions.length === 0 ? (
-        <p className="text-gray-500">No {filter} sessions found.</p>
+        <motion.p className="text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          No {filter} sessions found.
+        </motion.p>
       ) : (
-        <div className="space-y-4">
-          {filteredSessions.map((session) => (
-            <div
+        <motion.div
+          className="space-y-4"
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          {filteredSessions.map((session, i) => (
+            <motion.div
               key={session._id}
               className="bg-white shadow-md p-4 rounded-lg flex flex-col md:flex-row md:justify-between md:items-center gap-4"
+              variants={cardVariants}
+              custom={i}
             >
               <div>
                 <h3 className="font-semibold text-lg">{session.mentee?.name || 'Unnamed Mentee'}</h3>
@@ -154,11 +189,11 @@ const Sessions = () => {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

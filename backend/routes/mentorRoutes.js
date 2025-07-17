@@ -4,9 +4,6 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// @desc    Public - Get all mentors
-// @route   GET /api/mentors
-// @access  Public
 router.get('/', async (req, res) => {
   try {
     const mentors = await User.find({ role: 'mentor' }).select('-password');

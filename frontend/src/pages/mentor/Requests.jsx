@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import axios from '../../axiosInstance';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4 }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: (i) => ({
+    opacity: 1,
+    scale: 1,
+    transition: { delay: i * 0.1 }
+  })
+};
 
 const Requests = () => {
   const [requests, setRequests] = useState([]);
@@ -70,7 +89,12 @@ const Requests = () => {
   };
 
   return (
-    <div className="p-6">
+    <motion.div
+      className="p-6"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       <h2 className="text-2xl font-bold text-primary mb-4">Mentorship Requests</h2>
 
       {/* Filter & Sort Controls */}
@@ -104,15 +128,26 @@ const Requests = () => {
 
       {/* Content */}
       {loading ? (
-        <p className="text-gray-500">Loading...</p>
+        <motion.p className="text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          Loading...
+        </motion.p>
       ) : filtered.length === 0 ? (
-        <p className="text-gray-500">No mentorship requests matching this filter.</p>
+        <motion.p className="text-gray-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          No mentorship requests matching this filter.
+        </motion.p>
       ) : (
-        <div className="space-y-4">
-          {filtered.map((req) => (
-            <div
+        <motion.div
+          className="space-y-4"
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          {filtered.map((req, i) => (
+            <motion.div
               key={req._id}
               className="bg-white shadow-md p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              variants={cardVariants}
+              custom={i}
             >
               <div>
                 <h3 className="font-semibold text-lg">{req.mentee?.name || 'Unnamed Mentee'}</h3>
@@ -153,11 +188,11 @@ const Requests = () => {
                   </span>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

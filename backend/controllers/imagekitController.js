@@ -9,7 +9,7 @@ const imagekit = new ImageKit({
   urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT
 });
 
-export default imagekit;
-
-
-
+export const getAuthParams = (req, res) => {
+  const result = imagekit.getAuthenticationParameters();
+  res.json(result);
+};
