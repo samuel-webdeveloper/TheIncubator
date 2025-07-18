@@ -81,13 +81,14 @@ export const updateUserRole = async (req, res) => {
 // @desc    Admin fetches all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const { role } = req.query;
+    const query = role ? { role } : {};
+    const users = await User.find(query).select('-password');
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 // @desc    Admin fetches all mentors
 export const getAllMentors = async (req, res) => {
   try {
