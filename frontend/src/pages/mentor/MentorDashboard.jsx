@@ -65,7 +65,7 @@ const MentorDashboard = () => {
 
   const fetchMentees = async () => {
     try {
-      const res = await axios.get('/api/admin/users?role=mentee', { headers });
+      const res = await axios.get('/api/auth/mentees', { headers });
       setMentees(res.data || []);
     } catch (error) {
       console.error('❌ Failed to fetch mentees:', error);

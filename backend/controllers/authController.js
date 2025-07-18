@@ -115,3 +115,13 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc Get all mentees (for mentors to send requests)
+export const getAllMentees = async (req, res) => {
+  try {
+    const mentees = await User.find({ role: 'mentee' }).select('-password');
+    res.status(200).json(mentees);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
