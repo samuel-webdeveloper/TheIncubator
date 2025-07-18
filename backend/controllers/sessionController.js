@@ -112,7 +112,29 @@ export const getMySessions = async (req, res) => {
 
     filter.status = { $ne: 'Cancelled' };
 
-    const sessions = await Session.find(filter)
+    let sessions = await Session.find(filter)
+      .populate('mentor', 'name email')
+      .populate('mentee', 'name email');
+
+    const now = new Date();
+
+    // Update sessions that are in the past and still marked as scheduled
+    await Promise.all(
+      sessions.map(async (session) => {
+        const sessionDate = new Date(session.date);
+        const [hour, minute] = session.time.split(':');
+        sessionDate.setHours(hour);
+        sessionDate.setMinutes(minute);
+
+        if (session.status === 'scheduled' && sessionDate < now) {
+          session.status = 'completed';
+          await session.save();
+        }
+      })
+    );
+
+    // Re-fetch updated sessions to reflect changes
+    sessions = await Session.find(filter)
       .populate('mentor', 'name email')
       .populate('mentee', 'name email');
 

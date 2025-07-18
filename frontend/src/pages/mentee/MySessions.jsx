@@ -106,7 +106,7 @@ const MySessions = () => {
           <AnimatePresence>
             {filteredSessions.map((session) => {
               const sessionDate = new Date(session.date);
-              const isPast = sessionDate < today;
+              const isPast = session.status === 'completed' || sessionDate < today;
               const hasFeedback = session.feedback && session.feedback.rating;
 
               return (
