@@ -75,7 +75,7 @@ const MentorDetail = () => {
 
       await axios.post(
         '/api/requests',
-        { mentorId: id, message, slot: slotString },
+        { targetUserId: id, message, slot: slotString, createdBy: 'mentee' },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         }
