@@ -188,6 +188,7 @@ export const manuallyAssignMentor = async (req, res) => {
       message: message || 'Assigned by admin',
       status: 'accepted',
       slot,
+      createdBy: 'admin',
     });
 
     const populated = await MentorshipRequest.findById(newRequest._id)
