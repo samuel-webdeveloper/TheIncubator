@@ -81,7 +81,7 @@ const MentorDetail = () => {
         }
       );
 
-      toast.success('✅ Mentorship request sent successfully');
+      toast.success('Mentorship request sent successfully');
     } catch (error) {
       toast.error('Failed to send mentorship request');
     }

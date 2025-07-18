@@ -33,7 +33,9 @@ const MentorDashboard = () => {
   const [acceptedMentees, setAcceptedMentees] = useState(0);
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [mentees, setMentees] = useState([]);
+  const [availability, setAvailability] = useState(null);
   const [selectedMenteeId, setSelectedMenteeId] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState('');
   const [showForm, setShowForm] = useState(false);
   const today = new Date();
 
@@ -73,6 +75,15 @@ const MentorDashboard = () => {
     }
   };
 
+  const fetchAvailability = async () => {
+    try {
+      const res = await axios.get(`/api/availability/${user?._id}`, { headers });
+      setAvailability(res.data);
+    } catch (error) {
+      console.error('❌ Failed to fetch availability:', error);
+    }
+  };
+
   const handleRequestSubmit = async () => {
     if (!selectedMenteeId) {
       return toast.warning('Please select a mentee');
@@ -80,14 +91,20 @@ const MentorDashboard = () => {
 
     try {
       await axios.post(
-        '/api/requests/send',
-        { menteeId: selectedMenteeId },
+        '/api/requests',
+        {
+          targetUserId: selectedMenteeId,
+          message: 'Mentorship request from mentor',
+          createdBy: 'mentor',
+          slot: selectedSlot || null
+        },
         { headers }
       );
       toast.success('Mentorship request sent!');
       setShowForm(false);
       setSelectedMenteeId('');
-      fetchDashboardData(); // Refresh dashboard stats
+      setSelectedSlot('');
+      fetchDashboardData();
     } catch (error) {
       console.error('❌ Request failed:', error);
       toast.error(error.response?.data?.message || 'Request failed');
@@ -97,6 +114,7 @@ const MentorDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
     fetchMentees();
+    fetchAvailability();
   }, []);
 
   return (
@@ -180,6 +198,23 @@ const MentorDashboard = () => {
                 <option key={mentee._id} value={mentee._id}>{mentee.name} ({mentee.email})</option>
               ))}
             </select>
+
+            {/* Slot selection dropdown */}
+            <select
+              value={selectedSlot}
+              onChange={(e) => setSelectedSlot(e.target.value)}
+              className="w-full p-2 border rounded mb-4"
+            >
+              <option value="">-- Optional: Select Time Slot --</option>
+              {availability?.slots?.map((slot, i) =>
+                slot.times.map((time, j) => (
+                  <option key={`${i}-${j}`} value={`${slot.day} @ ${time.start} - ${time.end}`}>
+                    {slot.day} @ {time.start} - {time.end}
+                  </option>
+                ))
+              )}
+            </select>
+
             <div className="flex justify-end space-x-2">
               <button onClick={() => setShowForm(false)} className="px-4 py-2 bg-gray-300 rounded">Cancel</button>
               <button onClick={handleRequestSubmit} className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark">Send</button>

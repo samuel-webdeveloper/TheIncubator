@@ -5,17 +5,17 @@ import Session from '../models/Session.js';
 // Create a mentorship request (can be initiated by either mentor or mentee)
 export const createRequest = async (req, res) => {
   try {
-    const { targetUserId, message, slot, initiatorRole } = req.body;
+    const { targetUserId, message, slot, createdBy } = req.body;
 
-    if (!targetUserId || !message || !initiatorRole) {
+    if (!targetUserId || !message || !createdBy) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    if (!['mentor', 'mentee'].includes(initiatorRole)) {
+    if (!['mentor', 'mentee'].includes(createdBy)) {
       return res.status(400).json({ message: 'Invalid initiator role' });
     }
 
-    const isMentorInitiator = initiatorRole === 'mentor';
+    const isMentorInitiator = createdBy === 'mentor';
 
     const mentorId = isMentorInitiator ? req.user.id : targetUserId;
     const menteeId = isMentorInitiator ? targetUserId : req.user.id;
@@ -36,7 +36,7 @@ export const createRequest = async (req, res) => {
       mentor: mentorId,
       message,
       slot,
-      initiatorRole,
+      createdBy,
     });
 
     res.status(201).json({ message: 'Request sent successfully', data: newRequest });
@@ -172,7 +172,7 @@ export const getRequestsByMentor = async (req, res) => {
   try {
     const requests = await MentorshipRequest.find({
       mentor: req.user.id,
-      initiatorRole: 'mentor',
+      createdBy: 'mentor',
     }).populate('mentee', 'name email');
 
     res.status(200).json(requests);
