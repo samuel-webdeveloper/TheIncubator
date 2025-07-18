@@ -18,6 +18,11 @@ const requestSchema = new mongoose.Schema(
     },
     slot: {
       type: String,
+      required: false, // was true before
+    },
+    initiatorRole: {
+      type: String,
+      enum: ['mentor', 'mentee'],
       required: true,
     },
     status: {

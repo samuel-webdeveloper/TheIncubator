@@ -6,6 +6,7 @@ import {
   getRequestsByMentee,
   updateRequestStatus,
   deleteRequest,
+  getRequestsByMentor,
 } from '../controllers/mentorshipController.js';
 
 const router = express.Router();
@@ -24,5 +25,8 @@ router.put('/:id/status', protect, updateRequestStatus);
 
 // Mentee cancel request
 router.delete('/:id', protect, deleteRequest);
+
+// Mentor: View requests they initiated
+router.get('/mentor/sent', protect, getRequestsByMentor);
 
 export default router;

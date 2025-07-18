@@ -2,30 +2,41 @@
 import MentorshipRequest from '../models/MentorshipRequest.js';
 import Session from '../models/Session.js';
 
-// Mentee: Create a mentorship request
+// Create a mentorship request (can be initiated by either mentor or mentee)
 export const createRequest = async (req, res) => {
   try {
-    const { mentorId, message, slot } = req.body;
+    const { targetUserId, message, slot, initiatorRole } = req.body;
 
-    if (!mentorId || !message || !slot) {
-      return res.status(400).json({ message: 'Mentor ID, message, and slot are required' });
+    if (!targetUserId || !message || !initiatorRole) {
+      return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    if (!['mentor', 'mentee'].includes(initiatorRole)) {
+      return res.status(400).json({ message: 'Invalid initiator role' });
+    }
+
+    const isMentorInitiator = initiatorRole === 'mentor';
+
+    const mentorId = isMentorInitiator ? req.user.id : targetUserId;
+    const menteeId = isMentorInitiator ? targetUserId : req.user.id;
+
+    // Check for existing pending request
     const existing = await MentorshipRequest.findOne({
       mentor: mentorId,
-      mentee: req.user.id,
+      mentee: menteeId,
       status: 'pending',
     });
 
     if (existing) {
-      return res.status(400).json({ message: 'You already have a pending request with this mentor' });
+      return res.status(400).json({ message: 'A pending request already exists between you two' });
     }
 
     const newRequest = await MentorshipRequest.create({
-      mentee: req.user.id,
+      mentee: menteeId,
       mentor: mentorId,
       message,
       slot,
+      initiatorRole,
     });
 
     res.status(201).json({ message: 'Request sent successfully', data: newRequest });
@@ -156,3 +167,16 @@ export const deleteRequest = async (req, res) => {
   }
 };
 
+// Mentor: View requests they initiated
+export const getRequestsByMentor = async (req, res) => {
+  try {
+    const requests = await MentorshipRequest.find({
+      mentor: req.user.id,
+      initiatorRole: 'mentor',
+    }).populate('mentee', 'name email');
+
+    res.status(200).json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
