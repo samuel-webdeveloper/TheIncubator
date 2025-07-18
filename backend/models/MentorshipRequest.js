@@ -22,7 +22,7 @@ const requestSchema = new mongoose.Schema(
     },
     createdBy: {
       type: String,
-      enum: ['mentor', 'mentee'],
+      enum: ['mentor', 'mentee', 'admin'],
       required: true,
     },
     status: {
